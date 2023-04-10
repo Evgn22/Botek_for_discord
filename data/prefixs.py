@@ -10,5 +10,5 @@ class Prefix(SqlAlchemyBase):
                                   primary_key=True, autoincrement=True)
     server_name = sqlalchemy.Column(sqlalchemy.String)
     prefix = sqlalchemy.Column(sqlalchemy.String, nullable=True)
-    russian_ruletka = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
+    mafia = sqlalchemy.Column(sqlalchemy.Integer, nullable=False)
 

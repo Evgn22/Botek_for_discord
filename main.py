@@ -11,6 +11,7 @@ from discord.ext import commands, tasks
 from discord.utils import get
 from discord.ext.commands import Bot
 import sys
+import random
 from data import db_session
 from data.func import main
 
@@ -40,7 +41,7 @@ class YLBotClient(discord.Client):
                 server.server_id = guild.id
                 server.server_name = guild.name
                 server.prefix = '!'
-                server.russian_ruletka = 0
+                server.mafia = 0
                 db_sess.add(server)
                 db_sess.commit()
 
@@ -67,6 +68,20 @@ class YLBotClient(discord.Client):
                     await message.channel.send(f'Префикс сменён на ( {mcs[-1]} )')
                 else:
                     await message.channel.send('Не правильно указан префикс!')
+            elif mcs[0] == f'{symbol}ruletka':
+                if 3 > len(mcs) > 1 and mcs[-1] in '123456' and len(mcs[-1]) == 1:
+                    a = int(mcs[-1])
+                    if a == random.randint(1, 6):
+                        await message.channel.send('Повезло тебе, дружочек! :P')
+                    else:
+                        await message.channel.send('Ай-яй-яй...Пуля попала прямо в лоб! Тащите гробик! :(')
+                        role = message.guild.get_role(1094978465838669854)
+                        await message.author.add_roles(role)
+                        await message.author.move_to(None)
+                        await asyncio.sleep(60)
+                        await message.author.remove_roles(role)
+                else:
+                    await message.channel.send('Сделайте правильную ставку! Число от 1 до 6!')
 
 
 intents = discord.Intents.default()
