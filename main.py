@@ -23,7 +23,7 @@ logger.addHandler(handler)
 db_session.global_init("db/blogs.db")
 db_sess = db_session.create_session()
 
-TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.G0D9Nv.qP3Y6JPLyZYc_LH3XLJnfa7aCca85ss4BNJN80"
+TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.GbaZD4.MoPdMeVgQ-SRU_tKC_OalOtbGjSrg8o8NEvboA"
 
 
 class YLBotClient(discord.Client):
@@ -61,8 +61,11 @@ class YLBotClient(discord.Client):
             mgi = message.guild.id
             mcs = message.content.split()
             symbol = db_sess.query(Prefix.prefix).filter(Prefix.server_id.like(mgi)).first()[0]
+            mafia = db_sess.query(Prefix.mafia).filter(Prefix.server_id.like(mgi)).first()[0]
             if message.content == 'Префикс':
                 await message.channel.send(f'Префикс ( {symbol} )')
+            elif mafia:
+                pass
             elif symbol == mcs[0][0]:
                 if message.content == f'{symbol}help':
                     await message.author.send(
@@ -72,13 +75,16 @@ class YLBotClient(discord.Client):
                                     'Чтобы сыграть в русскую рулетку напишите !ruletka'])
                                                   )
                 if mcs[0] == f'{symbol}cprefix':
-                    if 3 > len(mcs) > 1 and mcs[-1] != '' and len(mcs[-1]) == 1:
-                        prfx = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
-                        prfx.prefix = mcs[-1]
-                        db_sess.commit()
-                        await message.channel.send(f'Префикс сменён на ( {mcs[-1]} )')
+                    if message.author == message.guild.owner:
+                        if 3 > len(mcs) > 1 and mcs[-1] != '' and len(mcs[-1]) == 1:
+                            prfx = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
+                            prfx.prefix = mcs[-1]
+                            db_sess.commit()
+                            await message.channel.send(f'Префикс сменён на ( {mcs[-1]} )')
+                        else:
+                            await message.channel.send('Неправильно указан префикс!')
                     else:
-                        await message.channel.send('Неправильно указан префикс!')
+                        await message.channel.send('Префикс может менять только создатель сервера')
                 elif mcs[0] == f'{symbol}ruletka':
                     if 3 > len(mcs) > 1 and mcs[-1] in '123456' and len(mcs[-1]) == 1:
                         a = int(mcs[-1])
@@ -93,6 +99,10 @@ class YLBotClient(discord.Client):
                             await message.author.remove_roles(role)
                     else:
                         await message.channel.send('Сделайте правильную ставку! Число от 1 до 6!')
+                elif mcs[0] == f'{symbol}mafia':
+                    mafia = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
+                    mafia.mafia = 1
+                    db_sess.commit()
         else:
             await message.channel.send('Давайте общаться на сервере! ^_^')
 
