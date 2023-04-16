@@ -1,2 +1,2 @@
-SQLAlchemy~=2.0.8
-discprd.py~=2.2.2
+SQLAlchemy
+discord.py
