@@ -23,7 +23,7 @@ logger.addHandler(handler)
 db_session.global_init("db/blogs.db")
 db_sess = db_session.create_session()
 
-TOKEN = ""
+TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.G0D9Nv.qP3Y6JPLyZYc_LH3XLJnfa7aCca85ss4BNJN80"
 
 
 class YLBotClient(discord.Client):
