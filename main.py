@@ -20,10 +20,11 @@ logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(name)s: %(message)s'))
 logger.addHandler(handler)
+roles = ["doc", "maf", "ino", "pol", "pro", 'ino', 'maf', 'ino']
 db_session.global_init("db/blogs.db")
 db_sess = db_session.create_session()
 
-TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.GbaZD4.MoPdMeVgQ-SRU_tKC_OalOtbGjSrg8o8NEvboA"
+TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.G4cvfl.KKTZTnqW0mStqe5XqNYZzEjPmIOVu6ybGKtCx8"
 
 
 class YLBotClient(discord.Client):
@@ -42,17 +43,10 @@ class YLBotClient(discord.Client):
                 server.server_name = guild.name
                 server.prefix = '!'
                 server.mafia = 0
+                server.chat = ''
+                server.players = ''
                 db_sess.add(server)
                 db_sess.commit()
-
-    async def on_member_join(self, member):
-        await member.create_dm()
-        await member.dm_channel.send(
-            f'Привет, {member.name}!',
-            'Чтобы ещё раз получить инструкцию пропишите !help'
-            'Чтобы сменить префикс напишите !cprefix'
-            'Чтобы сыграть в русскую рулетку напишите !ruletka'
-        )
 
     async def on_message(self, message):
         if message.author == self.user:
@@ -62,17 +56,29 @@ class YLBotClient(discord.Client):
             mcs = message.content.split()
             symbol = db_sess.query(Prefix.prefix).filter(Prefix.server_id.like(mgi)).first()[0]
             mafia = db_sess.query(Prefix.mafia).filter(Prefix.server_id.like(mgi)).first()[0]
-            if message.content == 'Префикс':
+            if message.content == 'prefix':
                 await message.channel.send(f'Префикс ( {symbol} )')
             elif mafia:
-                pass
+                players = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
+                chat = db_sess.query(Prefix.chat).filter(Prefix.server_id.like(mgi)).first()[0]
+                if mafia == 1:
+                    if message.content.lower() == 'я' and chat == str(message.channel):
+                        players.players += f'{str(message.author.name)}:ALIVE:{roles.pop()}!@#?%'
+                        db_sess.commit()
+                        await message.channel.send(f'@{message.author.name} принят!')
+                        if len(players.players.split('!@#?%')) > 8:
+                            await message.channel.send('Набор окончен!')
+                            players.mafia = 2
+                            db_sess.commit()
             elif symbol == mcs[0][0]:
                 if message.content == f'{symbol}help':
                     await message.author.send(
                         '\n'.join([f'Привет, {message.author.name}!',
-                                    'Чтобы ещё раз получить инструкцию пропишите !help',
-                                    'Чтобы сменить префикс напишите !cprefix',
-                                    'Чтобы сыграть в русскую рулетку напишите !ruletka'])
+                                   f'1. Чтобы ещё раз получить инструкцию пропишите {symbol}help',
+                                   '2. Чтобы узнать текущий префикс напишите prefix',
+                                   f'3. Чтобы сменить префикс напишите {symbol}cprefix',
+                                   f'4. Чтобы сыграть в русскую рулетку напишите {symbol}ruletka',
+                                   f'5. Чтоыб сыграть в мафию пропишите {symbol}mafia'])
                                                   )
                 if mcs[0] == f'{symbol}cprefix':
                     if message.author == message.guild.owner:
@@ -99,9 +105,12 @@ class YLBotClient(discord.Client):
                             await message.author.remove_roles(role)
                     else:
                         await message.channel.send('Сделайте правильную ставку! Число от 1 до 6!')
-                elif mcs[0] == f'{symbol}mafia':
+                elif mcs[0] == f'{symbol}mafia' and not mafia:
+                    await message.channel.send('@everyone Сбор мафии! Желающие сыграть напишите "я"')
                     mafia = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
                     mafia.mafia = 1
+                    channel = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
+                    channel.chat = str(message.channel)
                     db_sess.commit()
         else:
             await message.channel.send('Давайте общаться на сервере! ^_^')
