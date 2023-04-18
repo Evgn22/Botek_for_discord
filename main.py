@@ -24,7 +24,7 @@ roles = ["doc", "maf", "ino", "pol", "pro", 'ino', 'maf', 'ino']
 db_session.global_init("db/blogs.db")
 db_sess = db_session.create_session()
 
-TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.G4cvfl.KKTZTnqW0mStqe5XqNYZzEjPmIOVu6ybGKtCx8"
+TOKEN = ""
 
 
 class YLBotClient(discord.Client):
@@ -65,7 +65,7 @@ class YLBotClient(discord.Client):
                     if message.content.lower() == 'я' and chat == str(message.channel):
                         players.players += f'{str(message.author.name)}:ALIVE:{roles.pop()}!@#?%'
                         db_sess.commit()
-                        await message.channel.send(f'@{message.author.name} принят!')
+                        await message.channel.send('@' + str(message.author.name) + ' принят!')
                         if len(players.players.split('!@#?%')) > 8:
                             await message.channel.send('Набор окончен!')
                             players.mafia = 2
