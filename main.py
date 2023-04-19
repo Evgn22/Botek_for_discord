@@ -1,5 +1,6 @@
 import discord
 import logging
+import requests
 import sqlite3
 from data.prefixs import Prefix
 from data import db_session
@@ -24,7 +25,7 @@ roles = ["doc", "maf", "ino", "pol", "pro", 'ino', 'maf', 'ino']
 db_session.global_init("db/blogs.db")
 db_sess = db_session.create_session()
 
-TOKEN = ""
+TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.G06R7D.rzTUXrhWb54uxawnZYUmPP5F2KdTUq21hKYKSY"
 
 
 class YLBotClient(discord.Client):
@@ -63,9 +64,9 @@ class YLBotClient(discord.Client):
                 chat = db_sess.query(Prefix.chat).filter(Prefix.server_id.like(mgi)).first()[0]
                 if mafia == 1:
                     if message.content.lower() == 'я' and chat == str(message.channel):
-                        players.players += f'{str(message.author.name)}:ALIVE:{roles.pop()}!@#?%'
+                        players.players += f'{str(message.author)}:ALIVE:{roles.pop()}!@#?%'
                         db_sess.commit()
-                        await message.channel.send('@' + str(message.author.name) + ' принят!')
+                        await message.channel.send(str(message.author.mention) + ' принят!')
                         if len(players.players.split('!@#?%')) > 8:
                             await message.channel.send('Набор окончен!')
                             players.mafia = 2
@@ -77,8 +78,9 @@ class YLBotClient(discord.Client):
                                    f'1. Чтобы ещё раз получить инструкцию пропишите {symbol}help',
                                    '2. Чтобы узнать текущий префикс напишите prefix',
                                    f'3. Чтобы сменить префикс напишите {symbol}cprefix',
-                                   f'4. Чтобы сыграть в русскую рулетку напишите {symbol}ruletka',
-                                   f'5. Чтоыб сыграть в мафию пропишите {symbol}mafia'])
+                                   f'4. Чтобы сыграть в русскую рулетку напишите {symbol}ruletka (число от 1 до 6)',
+                                   f'5. Чтобы сыграть в мафию пропишите {symbol}mafia',
+                                   f'6. Чтобы сыграть в мафию пропишите {symbol}capybara'])
                                                   )
                 if mcs[0] == f'{symbol}cprefix':
                     if message.author == message.guild.owner:
@@ -91,20 +93,23 @@ class YLBotClient(discord.Client):
                             await message.channel.send('Неправильно указан префикс!')
                     else:
                         await message.channel.send('Префикс может менять только создатель сервера')
+                elif mcs[0] == f'{symbol}capybara':
+                    response = requests.get('https://api.capy.lol/v1/capybara?json=true').json()
+                    await message.channel.send(response['data']['url'])
                 elif mcs[0] == f'{symbol}ruletka':
                     if 3 > len(mcs) > 1 and mcs[-1] in '123456' and len(mcs[-1]) == 1:
                         a = int(mcs[-1])
                         if a != random.randint(1, 6):
-                            await message.channel.send('Повезло тебе, дружочек! :P')
+                            await message.channel.send('Чёртов везунчик.')
                         else:
-                            await message.channel.send('Ай-яй-яй...Пуля попала прямо в лоб! Тащите гробик! :(')
+                            await message.channel.send(':skull_crossbones: Тебе не повезло :skull_crossbones:')
                             role = message.guild.get_role(1094978465838669854)
                             await message.author.add_roles(role)
                             await message.author.move_to(None)
                             await asyncio.sleep(60)
                             await message.author.remove_roles(role)
                     else:
-                        await message.channel.send('Сделайте правильную ставку! Число от 1 до 6!')
+                        await message.channel.send('Сделай правильную ставку! Число от 1 до 6!')
                 elif mcs[0] == f'{symbol}mafia' and not mafia:
                     await message.channel.send('@everyone Сбор мафии! Желающие сыграть напишите "я"')
                     mafia = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
@@ -113,7 +118,7 @@ class YLBotClient(discord.Client):
                     channel.chat = str(message.channel)
                     db_sess.commit()
         else:
-            await message.channel.send('Давайте общаться на сервере! ^_^')
+            pass
 
 
 intents = discord.Intents.default()
