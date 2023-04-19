@@ -24,8 +24,9 @@ logger.addHandler(handler)
 roles = ["doc", "maf", "ino", "pol", "pro", 'ino', 'maf', 'ino']
 db_session.global_init("db/blogs.db")
 db_sess = db_session.create_session()
+thr = None
 
-TOKEN = "MTA4ODA0Nzc1NjQ4MTkyNTE1MQ.G06R7D.rzTUXrhWb54uxawnZYUmPP5F2KdTUq21hKYKSY"
+TOKEN = ""
 
 
 class YLBotClient(discord.Client):
@@ -36,6 +37,9 @@ class YLBotClient(discord.Client):
                 f'{self.user} подключились к чату:\n'
                 f'{guild.name}(id: {guild.id})')
             ids = [i.server_id for i in db_sess.query(Prefix).all()]
+            if guild.id == 1088054984190480395:
+                global thr
+                thr = guild.owner
             if guild.id in ids:
                 continue
             else:
@@ -75,12 +79,18 @@ class YLBotClient(discord.Client):
                 if message.content == f'{symbol}help':
                     await message.author.send(
                         '\n'.join([f'Привет, {message.author.name}!',
-                                   f'1. Чтобы ещё раз получить инструкцию пропишите {symbol}help',
-                                   '2. Чтобы узнать текущий префикс напишите prefix',
-                                   f'3. Чтобы сменить префикс напишите {symbol}cprefix',
-                                   f'4. Чтобы сыграть в русскую рулетку напишите {symbol}ruletka (число от 1 до 6)',
-                                   f'5. Чтобы сыграть в мафию пропишите {symbol}mafia',
-                                   f'6. Чтобы сыграть в мафию пропишите {symbol}capybara'])
+                                   'На севере:',
+                                   f'   1. Чтобы ещё раз получить инструкцию пропишите {symbol}help',
+                                   '   2. Чтобы узнать текущий префикс напишите prefix',
+                                   f'   3. Чтобы сменить префикс напишите {symbol}cprefix',
+                                   f'   4. Чтобы сыграть в русскую рулетку пропишите {symbol}ruletka (число от 1 до 6)',
+                                   f'   5. Чтобы сыграть в мафию пропишите {symbol}mafia',
+                                   f'   6. Чтобы посмотреть на капибару пропишите {symbol}capybara',
+                                   'В личном чате с ботом:',
+                                   '    1. Чтобы посмотреть на капибару пропишите capybara',
+                                   '    2. Чтобы сообщить об ошибке пропишите error (текст)',
+                                   '    2.1. Также можно приложить картинки. ',
+                                   '    2.2. Важно! Текст и картинки нужно отправлять одним сообщением.'])
                                                   )
                 if mcs[0] == f'{symbol}cprefix':
                     if message.author == message.guild.owner:
@@ -118,7 +128,16 @@ class YLBotClient(discord.Client):
                     channel.chat = str(message.channel)
                     db_sess.commit()
         else:
-            pass
+            if message.content == 'capybara':
+                response = requests.get('https://api.capy.lol/v1/capybara?json=true').json()
+                await message.channel.send(response['data']['url'])
+            elif message.content.split()[0] == 'error':
+                msg = await message.channel.fetch_message(message.id)
+                await thr.send(embed=discord.Embed(description=f'!!!Error!!! {message.content[5:]}'))
+                for i in range(len(message.attachments)):
+                    await thr.send(f'{i + 1}.')
+                    await thr.send(msg.attachments[i].url)
+                await message.author.send('Спасибо за помощь, друг.')
 
 
 intents = discord.Intents.default()
