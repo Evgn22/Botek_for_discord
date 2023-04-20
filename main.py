@@ -1,20 +1,11 @@
 import discord
 import logging
 import requests
-import sqlite3
 from data.prefixs import Prefix
-from data import db_session
-import os
 import asyncio
-import datetime
-from discord.ext import commands
-from discord.ext import commands, tasks
-from discord.utils import get
-from discord.ext.commands import Bot
-import sys
+trigger = True
 import random
 from data import db_session
-from data.func import main
 
 logger = logging.getLogger('discord')
 logger.setLevel(logging.DEBUG)
@@ -54,7 +45,8 @@ class YLBotClient(discord.Client):
                 db_sess.commit()
 
     async def on_message(self, message):
-        if message.author == self.user:
+        global trigger
+        if trigger and message.author == self.user:
             return
         if str(message.channel.type) != 'private':
             mgi = message.guild.id
@@ -68,13 +60,71 @@ class YLBotClient(discord.Client):
                 chat = db_sess.query(Prefix.chat).filter(Prefix.server_id.like(mgi)).first()[0]
                 if mafia == 1:
                     if message.content.lower() == 'я' and chat == str(message.channel):
-                        players.players += f'{str(message.author)}:ALIVE:{roles.pop()}!@#?%'
+                        players.players += f'{str(message.author.id)}:{message.author.name}:ALIVE:{roles.pop()}!@#?%'
                         db_sess.commit()
                         await message.channel.send(str(message.author.mention) + ' принят!')
                         if len(players.players.split('!@#?%')) > 8:
-                            await message.channel.send('Набор окончен!')
                             players.mafia = 2
+                            await message.channel.send('Набор окончен!')
                             db_sess.commit()
+                elif mafia == 2 and message.author == self.user and message.content == 'Набор окончен!':
+                    trigger = True
+                    players_info = [i.split(':') for i in players.players.split('!@#?%')]
+                    for info in players_info[:-1]:
+                        player = client.get_user(int(info[0]))
+                        rules = ['Играть в мафию просто.',
+                                 'Мафия убивает.', 'Врач лечит', 'Полицейский сожает за решётку',
+                                 'ночная бабочка занимается своеобразными делами',
+                                 'А мирные жители надеятся, что переживут ночь',
+                                 'Игра длится пока мафия всех не убьёт или мирные жители не избавятся'
+                                 ' от мафии путём голосования.']
+                        txt = ':neutral_face:Ты мирный житель. Спи спокойно и надейся, что тебя не убьют.'
+                        if info[3] == 'maf':
+                            txt = ':skull:Ты мафия. Напиши мне ник того, кого хочешь убить. Не медли.'
+                        elif info[3] == 'pol':
+                            txt = ':cop:Ты Полицейский. Напиши мне ник того, кого хотел бы посадить.'
+                        elif info[3] == 'pro':
+                            txt = ':butterfly:Ты ночная бабочка. Напиши мне ник того, кого бы ты хотел охмурить.'
+                        elif info[3] == 'doc':
+                            txt = ':medical_symbol:Ты врач. Напиши ник того, кого вылечишь.'
+                        await player.send('\n'.join(rules))
+                        await player.send(txt)
+                        if info == players_info[-2]:
+                            players = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
+                            players.mafia = 3
+                            db_sess.commit()
+                elif mafia == 3:
+                    mai = message.author.id
+                    players_ids = [int(i.split(':')[0]) for i in players.players.split('!@#?%')]
+                    players_names = [i.split(':')[1] for i in players.players.split('!@#?%')]
+                    if mai in players_ids and message.content in players_names:
+                        info_author = [i.split(':') for i in players.players.split('!@#?%') if
+                                       int(i.split(':')[0]) == mai]
+                        players_info = [i.split(':') for i in players.players.split('!@#?%')]
+                        players = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
+                        for i in players_info:
+                            if i[1] == message.content and info_author[2] != 'sovr':
+                                if info_author[3] == 'maf':
+                                    i[2] = 'died'
+                                elif info_author[3] == 'pro':
+                                    i[2] = 'sovr'
+                                elif info_author[3] == 'doc':
+                                    i[2] = 'ALIVE'
+                                elif info_author[3] == 'pol':
+                                    i[2] = 'turm'
+                        players_info = [':'.join(i) for i in players_info]
+                        players.players = '!@#?%'.join(players_info)
+                        await message.channel.send('Принято.')
+                        await asyncio.sleep(20)
+                        players.mafia = 4
+                        db_sess.commit()
+                elif mafia == 4:
+                    players = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
+                    players_info = [i.split(':') for i in players.players.split('!@#?%')]
+                    players_roles = [i.split(':')[3] for i in players.players.split('!@#?%')]
+                    if 'maf' in list(set(players_roles)) and len(list(set(players_roles))) == 1:
+                        pass
+
             elif symbol == mcs[0][0]:
                 if message.content == f'{symbol}help':
                     await message.author.send(
@@ -123,7 +173,8 @@ class YLBotClient(discord.Client):
                 elif mcs[0] == f'{symbol}mafia' and not mafia:
                     await message.channel.send('@everyone Сбор мафии! Желающие сыграть напишите "я"')
                     mafia = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
-                    mafia.mafia = 1
+                    mafia.mafia = 0
+                    trigger = False
                     channel = db_sess.query(Prefix).filter(Prefix.server_id.like(mgi)).first()
                     channel.chat = str(message.channel)
                     db_sess.commit()
